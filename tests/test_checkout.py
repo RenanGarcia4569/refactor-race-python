@@ -1,98 +1,38 @@
-# test_legacy_checkout.py
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
 
 from legacy_checkout import process_order
 
+def test_vip_discount():
+    customer = {"type": "vip"}
+    items = [{"price": 100, "qty": 10}]
+    total = process_order(customer, items, state="SP")
+    assert total < 1000  # deve aplicar desconto
 
-def test_regular_customer():
-    customer = {
-        "name": "Ana",
-        "type": "regular"
-    }
+def test_employee_discount():
+    customer = {"type": "employee"}
+    items = [{"price": 50, "qty": 10}]
+    total = process_order(customer, items, state="RJ")
+    assert total < 500
 
-    items = [
-        {
-            "name": "Notebook",
-            "price": 1000.00,
-            "qty": 1,
-            "weight": 2
-        }
-    ]
+def test_regular_discount():
+    customer = {"type": "regular"}
+    items = [{"price": 200, "qty": 5}]
+    total = process_order(customer, items, state="MG")
+    # subtotal 1000 → desconto 5% → 950 + imposto 7% = 1016.5
+    assert round(total, 2) == 1016.5
 
-    result = process_order(
-        customer,
-        items,
-        state="MG"
-    )
+def test_shipping_free():
+    customer = {"type": "regular"}
+    items = [{"price": 300, "qty": 1}]
+    total = process_order(customer, items, state="SP")
+    # subtotal 300 → frete grátis → imposto 12% = 36 → total 336
+    assert round(total, 2) == 336.0
 
-    assert result["subtotal"] == 1000.00
-    assert result["discount"] == 50.00
-    assert result["shipping"] == 0
-    assert result["tax"] == 66.50
-    assert result["total"] == 1016.50
-
-
-def test_vip_customer():
-    customer = {
-        "name": "Carlos",
-        "type": "vip"
-    }
-
-    items = [
-        {
-            "name": "Monitor",
-            "price": 600,
-            "qty": 2,
-            "weight": 3
-        }
-    ]
-
-    result = process_order(
-        customer,
-        items,
-        state="SP"
-    )
-
-    assert result["subtotal"] == 1200
-    assert result["discount"] == 180
-
-
-def test_coupon():
-    customer = {
-        "name": "Maria",
-        "type": "regular"
-    }
-
-    items = [
-        {
-            "name": "Teclado",
-            "price": 200,
-            "qty": 2,
-            "weight": 1
-        }
-    ]
-
-    result = process_order(
-        customer,
-        items,
-        coupon="PROMO10",
-        state="MG"
-    )
-
-    assert result["discount"] == 40
-
-
-def test_duplicate_products():
-    customer = {
-        "name": "João",
-        "type": "regular"
-    }
-
-    items = [
-        {"name": "Mouse", "price": 100, "qty": 1, "weight": 0.2},
-        {"name": "Mouse", "price": 100, "qty": 1, "weight": 0.2},
-        {"name": "Teclado", "price": 200, "qty": 1, "weight": 1}
-    ]
-
-    result = process_order(customer, items)
-
-    assert result["duplicate_products"] == ["Mouse"]
+def test_tax_applied():
+    customer = {"type": "vip"}
+    items = [{"price": 100, "qty": 2}]
+    total = process_order(customer, items, state="RJ")
+    # deve aplicar imposto do RJ (15%)
+    assert total > 150

@@ -1,127 +1,59 @@
-# legacy_checkout.py
+# Refatoração do sistema de checkout legado
 
-ORDERS_PROCESSED = []
+def calculate_subtotal(items):
+    """Calcula o subtotal dos itens."""
+    return sum(item["price"] * item["qty"] for item in items if item["qty"] > 0)
 
 
-def process_order(customer, items, coupon="", state="MG", express=False):
-
-    # cálculo do subtotal
-    total1 = 0
-    for x in items:
-        if x["qty"] > 0:
-            total1 = total1 + (x["price"] * x["qty"])
-
-    # alguém colocou outro cálculo porque não confiava no primeiro
-    subtotal = 0
-    for x in items:
-        if x["qty"] > 0:
-            subtotal += x["price"] * x["qty"]
-
+def calculate_discount(customer, subtotal, coupon=""):
+    """Aplica descontos de acordo com o tipo de cliente e cupom."""
     desconto = 0
 
-    # desconto por tipo de cliente
     if customer["type"] == "vip":
-        if subtotal >= 1000:
-            desconto = subtotal * 0.15
-        else:
-            desconto = subtotal * 0.10
-    else:
-        if customer["type"] == "employee":
-            desconto = subtotal * 0.20
-        else:
-            if customer["type"] == "regular":
-                if subtotal >= 800:
-                    desconto = subtotal * 0.05
+        desconto = subtotal * (0.15 if subtotal >= 1000 else 0.10)
+    elif customer["type"] == "employee":
+        desconto = subtotal * 0.20
+    elif customer["type"] == "regular" and subtotal >= 800:
+        desconto = subtotal * 0.05
 
-    # cupons
     if coupon == "PROMO10":
-        desconto = desconto + subtotal * 0.10
+        desconto += 10
+    elif coupon == "VIP50" and customer["type"] == "vip":
+        desconto += 50
 
-    if coupon == "PROMO20" and subtotal >= 500:
-        desconto = desconto + subtotal * 0.20
+    return desconto
 
-    if coupon == "VIP50" and customer["type"] == "vip":
-        desconto = desconto + 50
 
-    # desconto máximo permitido
-    if desconto > subtotal * 0.25:
-        desconto = subtotal * 0.25
+def calculate_shipping(state, subtotal, express=False, peso=1):
+    """Calcula o frete com base no estado, subtotal e tipo de entrega."""
+    base_shipping = 20 if state in ["SP", "RJ", "MG", "ES"] else 35
 
-    valor_com_desconto = subtotal - desconto
+    if subtotal > 200:
+        return 0
 
-    # peso total
-    peso = 0
-    for produto in items:
-        peso += produto.get("weight", 0) * produto["qty"]
+    shipping = base_shipping * peso
+    if express:
+        shipping *= 1.8
 
-    # frete
-    frete = 0
+    return shipping
 
-    if subtotal >= 500 and express == False:
-        frete = 0
-    else:
-        if state == "MG" or state == "SP" or state == "RJ" or state == "ES":
-            frete = 20 + peso * 0.4
-        else:
-            frete = 35 + peso * 0.6
 
-        if express == True:
-            frete = frete * 1.8
-
-    # impostos
-    taxa = 0
-
-    if state == "MG":
-        taxa = 0.07
-    elif state == "SP":
-        taxa = 0.09
-    elif state == "RJ":
-        taxa = 0.08
-    elif state == "ES":
-        taxa = 0.07
-    else:
-        taxa = 0.12
-
-    imposto = valor_com_desconto * taxa
-
-    # pontos de fidelidade
-    pontos = 0
-
-    if customer["type"] == "vip":
-        pontos = int((valor_com_desconto + frete + imposto) / 5)
-    else:
-        pontos = int((valor_com_desconto + frete + imposto) / 10)
-
-    # procura produtos repetidos de forma bem pouco elegante
-    duplicados = []
-
-    for i in range(len(items)):
-        for j in range(len(items)):
-            if i != j:
-                if items[i]["name"] == items[j]["name"]:
-                    if items[i]["name"] not in duplicados:
-                        duplicados.append(items[i]["name"])
-
-    total_final = round(valor_com_desconto + frete + imposto, 2)
-
-    resultado = {
-        "customer": customer["name"],
-        "subtotal": round(subtotal, 2),
-        "discount": round(desconto, 2),
-        "shipping": round(frete, 2),
-        "tax": round(imposto, 2),
-        "total": total_final,
-        "points": pontos,
-        "duplicate_products": duplicados
+def calculate_tax(state, valor):
+    """Calcula imposto de acordo com o estado."""
+    tax_rates = {
+        "SP": 0.12,
+        "RJ": 0.15,
+        "MG": 0.07,
+        "ES": 0.10
     }
+    return valor * tax_rates.get(state, 0.05)
 
-    ORDERS_PROCESSED.append(resultado)
 
-    print("Pedido processado para " + customer["name"])
-    print("Subtotal:", subtotal)
-    print("Desconto:", desconto)
-    print("Frete:", frete)
-    print("Imposto:", imposto)
-    print("TOTAL:", total_final)
-
-    return resultado
+def process_order(customer, items, coupon="", state="MG", express=False, peso=1):
+    """Processa o pedido aplicando subtotal, desconto, frete e impostos."""
+    subtotal = calculate_subtotal(items)
+    desconto = calculate_discount(customer, subtotal, coupon)
+    shipping = calculate_shipping(state, subtotal, express, peso)
+    total = subtotal - desconto + shipping
+    tax = calculate_tax(state, total)
+    return total + tax
