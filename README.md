@@ -37,3 +37,24 @@ Vide arquivo **METRICS.md**.
 - Implementar logs para auditoria de pedidos.
 - Adicionar validação de entrada (ex.: itens sem preço ou quantidade negativa).
 - Expandir regras de desconto e impostos para outros estados.
+
+## 🧪 Testes
+O projeto possui dois conjuntos de testes:
+- **Testes principais**: validam o fluxo completo de checkout.
+- **Testes extras**: validam cada função isolada (`calculate_subtotal`, `calculate_discount`, `calculate_shipping`, `calculate_tax`).
+
+Resultado: cobertura de testes aumentou para **99%**.
+
+---
+
+## 🤖 Uso da IA no Projeto
+Durante o desenvolvimento, utilizei a **IA Copilot (Microsoft)** como apoio para:
+- Resolver problemas de importação e estrutura de pacotes.
+- Sugerir refatorações para reduzir complexidade.
+- Criar testes unitários adicionais.
+- Gerar documentação (README.md e METRICS.md).
+- Orientar sobre fluxo de versionamento com Git.
+
+A IA funcionou como **assistente técnico**, acelerando o processo e garantindo maior qualidade no resultado final.
+
+
